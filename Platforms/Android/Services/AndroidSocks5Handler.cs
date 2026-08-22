@@ -11,7 +11,8 @@ public class AndroidSocks5Handler : HttpClientHandler
         {
             var proxy = new Proxy(Java.Net.Proxy.Type.Socks, new InetSocketAddress("127.0.0.1", 9050));
             var url = new URL(request.RequestUri?.ToString());
-            var httpURLConnection = (HttpURLConnection?)url.OpenConnection(proxy);
+            //var httpURLConnection = (HttpURLConnection?)url.OpenConnection(proxy);
+            var httpURLConnection = (HttpURLConnection?)url.OpenConnection();//localDevMr
 
             if (httpURLConnection is null)
                 throw new Exception("httpURLConnection was null in AndroidSocks5Handler.SendAsync()");

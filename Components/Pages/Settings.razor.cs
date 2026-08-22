@@ -576,9 +576,11 @@ public partial class Settings : ComponentBase, IDisposable
 
     public async Task ConnectToRemoteNodeAsync()
     {
-        if (string.IsNullOrEmpty(Password) || string.IsNullOrEmpty(Host))
-            return;
-
+        //if (string.IsNullOrEmpty(Password) || string.IsNullOrEmpty(Host))
+            //return;
+        Host = "192.168.132.142";
+        //Host = "10.0.2.2";
+        Password = "apitest";
         ShowConnectToRemoteNodeModal = true;
 
         await SecureStorageHelper.SetAsync("daemon-installation-type", DaemonInstallOptions.RemoteNode);
@@ -589,7 +591,9 @@ public partial class Settings : ComponentBase, IDisposable
         await SecureStorageHelper.SetAsync("host", host);
 
 #if ANDROID
-        GrpcChannelSingleton.CreateChannel(host, Password, new HttpClient(new GrpcWebHandler(GrpcWebMode.GrpcWeb, new AndroidSocks5Handler())));
+        host = "http://" + Host + ":9999";//localDevMr
+        GrpcChannelSingleton.CreateChannel(host, Password);//localDevMr
+        //GrpcChannelSingleton.CreateChannel(host, Password, new HttpClient(new GrpcWebHandler(GrpcWebMode.GrpcWeb, new AndroidSocks5Handler())));
 #endif
 
         //await HavenoDaemonService.StopHavenoDaemonAsync();

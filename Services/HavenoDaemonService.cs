@@ -2,6 +2,7 @@
 using HavenoSharp.Services;
 using Manta.Helpers;
 using Manta.Models;
+using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 
 namespace Manta.Services;
@@ -11,11 +12,12 @@ public abstract class HavenoDaemonServiceBase : IHavenoDaemonService
     private readonly IHavenoVersionService _versionService;
     private readonly IHavenoAccountService _accountService;
     private readonly IHavenoWalletService _walletService;
+    private readonly ILogger<IHavenoDaemonService> _logger;
 
     protected string _os;
     protected string _daemonPath;
 
-    public HavenoDaemonServiceBase(IHavenoWalletService walletService, IHavenoVersionService versionService, IHavenoAccountService accountService, string daemonPath)
+    public HavenoDaemonServiceBase(IHavenoWalletService walletService, IHavenoVersionService versionService, IHavenoAccountService accountService, string daemonPath, ILogger<IHavenoDaemonService> logger)
     {
         _accountService = accountService;
         _walletService = walletService;
@@ -23,6 +25,7 @@ public abstract class HavenoDaemonServiceBase : IHavenoDaemonService
 
         _os = RuntimeInformation.OSArchitecture.ToString() == "X64" ? "linux-x86_64" : "linux-aarch64";
         _daemonPath = daemonPath;
+        _logger = logger;
     }
 
     public abstract Task InstallHavenoDaemonAsync(IProgress<double> progressCb);
@@ -89,13 +92,14 @@ public abstract class HavenoDaemonServiceBase : IHavenoDaemonService
             {
                 throw;
             }
-            catch (RpcException)
+            catch (RpcException rex)
             {
                 // Might be running but wrong password?
+                _logger.LogError(rex, $"Exception message {rex.Message} {Environment.NewLine} {rex.InnerException?.Message} {Environment.NewLine}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                _logger.LogError(ex, $"Exception message {ex.Message} {Environment.NewLine} {ex.InnerException?.Message} {Environment.NewLine}");
             }
 
             await Task.Delay(100, cancellationToken);

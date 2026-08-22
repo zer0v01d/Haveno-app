@@ -5,6 +5,7 @@ using HavenoSharp.Singletons;
 using Manta.Helpers;
 using Manta.Models;
 using Manta.Singletons;
+using Microsoft.Extensions.Logging;
 
 namespace Manta.Services;
 
@@ -52,8 +53,9 @@ public class AndroidHavenoDaemonService : HavenoDaemonServiceBase
         IHavenoWalletService walletService, 
         IHavenoVersionService versionService, 
         IHavenoAccountService accountService,
-        NotificationSingleton notificationSingleton
-        ) : base( walletService, versionService, accountService, Path.Combine(ProotGlobals.HomeDir, "daemon"))
+        NotificationSingleton notificationSingleton,
+        ILogger<IHavenoDaemonService> logger
+        ) : base( walletService, versionService, accountService, Path.Combine(ProotGlobals.HomeDir, "daemon"), logger)
     {
         _grpcChannelSingleton = grpcChannelSingleton;
         _notificationSingleton = notificationSingleton;
