@@ -16,7 +16,7 @@
     <ApplicationTitle>Haveno</ApplicationTitle>
     <ApplicationId>com.haveno</ApplicationId>
     <DaemonUrl>https://github.com/atsamd21/haveno/releases/download/v1.8.0</DaemonUrl>
-    <Network>XMR_STAGENET</Network>
+    <Network>XMR_TESTNET</Network>
     <HavenoAppName>haveno-dev</HavenoAppName>
     <SimplexLink>https://smp4.simplex.im/g#hr4lvFeBmndWMKTwqiodPz3VBo_6UmdGWocXd1SupsM</SimplexLink>
     <MatrixLink>https://matrix.to/#/#haveno:monero.social</MatrixLink>

@@ -2,6 +2,7 @@
 using HavenoSharp.Models.Requests;
 using HavenoSharp.Services;
 using Manta.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Manta.Singletons;
 
@@ -9,6 +10,7 @@ public class DaemonConnectionSingleton
 {
     private readonly IHavenoVersionService _versionService;
     private readonly IHavenoWalletService _walletService;
+    private readonly ILogger<DaemonConnectionSingleton> _logger;
     private bool _hasCreatedInitializationTransaction;
 
     public string Version { get; private set; } = string.Empty;
@@ -18,10 +20,11 @@ public class DaemonConnectionSingleton
     public bool IsWalletAvailable { get; private set; }
     public Action<bool>? OnWalletAvailabilityChanged;
 
-    public DaemonConnectionSingleton(IHavenoVersionService versionService, IHavenoWalletService walletService)
+    public DaemonConnectionSingleton(IHavenoVersionService versionService, IHavenoWalletService walletService, ILogger<DaemonConnectionSingleton> logger)
     {
         _versionService = versionService;
         _walletService = walletService;
+        _logger = logger;
 
         Task.Run(PollDaemon);
         Task.Run(PollWallet);
@@ -63,8 +66,9 @@ public class DaemonConnectionSingleton
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, $"exception during {nameof(PollWallet)}");
                 if (IsWalletAvailable)
                 {
                     IsWalletAvailable = false;
@@ -98,8 +102,9 @@ public class DaemonConnectionSingleton
                     OnConnectionChanged?.Invoke(true);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, $"exception during {nameof(PollDaemon)}");
                 if (IsConnected)
                 {
                     IsConnected = false;
