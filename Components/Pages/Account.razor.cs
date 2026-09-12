@@ -242,7 +242,7 @@ public partial class Account : ComponentBase
             FieldId = field.Id,
             Form = PaymentAccountForm,
             Value = field.Value
-        });
+        });        
 
         _messageStore.Clear(() => field.Label);
 
@@ -251,12 +251,18 @@ public partial class Account : ComponentBase
             _messageStore.Add(() => field.Label, errorMessage);
         }
 
+        HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
+
+        foreach(string customExcMsg in customValidationExceptionMsges)
+            _messageStore.Add(() => field.Label, customExcMsg);
+
         SubmitButtonDisabled = !_editContext.Validate();
         _editContext.NotifyValidationStateChanged();
 
         if (!CustomAccountNameEnabled && AccountNameField is not null && CopyFromField is not null && field.Id == CopyFromField.Id)
         {
             AccountNameField.Value = $"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {CopyFromField.Value}";
+            _editContext!.NotifyFieldChanged(new FieldIdentifier(AccountNameField, nameof(AccountNameField.Value)));
         }
 
         StateHasChanged();
@@ -276,7 +282,10 @@ public partial class Account : ComponentBase
             return;
 
         if (AccountNameField is not null && CopyFromField is null)
+        {
             AccountNameField.Value = $"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {string.Join(", ", SupportedCurrencyCodes.Where(x => x.IsSelected).Select(x => x.Code))}";
+            _editContext!.NotifyFieldChanged(new FieldIdentifier(AccountNameField, nameof(AccountNameField.Value)));
+        }
     }
 
     public async Task DeleteAccountAsync(string paymentAccountId)
@@ -304,9 +313,6 @@ public partial class Account : ComponentBase
     public async Task CreatePaymentAccountAsync()
     {
         if (PaymentAccountForm is null)
-            return;
-
-        if(!ValidatePaymentAccountForm())
             return;
 
         IsFetching = true;
@@ -360,28 +366,24 @@ public partial class Account : ComponentBase
         }
     }
 
-   private bool ValidatePaymentAccountForm()
+    private HashSet<string> ValidateFieldUsingCustomLogic(PaymentAccountFormField field)
     {
-        ArgumentNullException.ThrowIfNull(PaymentAccountForm);
-        ArgumentNullException.ThrowIfNull(_messageStore);
-        ArgumentNullException.ThrowIfNull(_editContext);
+        HashSet<string> exceptionMessages = [];
 
-        foreach (PaymentAccountFormField field in PaymentAccountForm.Fields)
+        switch(field.Id)
         {
-            _messageStore.Clear(() => field.Label);
-
-            if (field.Id == FieldId.ACCOUNT_NAME)
-            {
+            case FieldId.ACCOUNT_NAME:
                 if(string.IsNullOrWhiteSpace(field.Value))
-                    _messageStore.Add(() => field.Label, $"{field.Label} is required. {Environment.NewLine} Please provide value.");
+                    exceptionMessages.Add($"{field.Label} is required. {Environment.NewLine} Please provide value.");
 
                 if(PaymentAccounts.Any(a => a.AccountName.Equals(field.Value, StringComparison.Ordinal)))
-                    _messageStore.Add(() => field.Label, $"That account name is already used for another saved account.{Environment.NewLine} Please choose another name.");
-            }
+                    exceptionMessages.Add($"That account name is already used for another saved account.{Environment.NewLine} Please choose another name.");
+                break;
 
-            _editContext.NotifyValidationStateChanged();
+            default:
+                break;
         }
 
-        return _editContext.Validate();
-    }    
+        return exceptionMessages;
+    }
 }
