@@ -1,6 +1,4 @@
-﻿using Grpc.Core;
-using HavenoSharp.Extensions;
-using HavenoSharp.Models;
+﻿using HavenoSharp.Models;
 using HavenoSharp.Models.Requests;
 using HavenoSharp.Services;
 using Manta.Components.Reusable;
@@ -222,7 +220,7 @@ public partial class Account : ComponentBase
         {
             countryField.Value = country;
         }
-        
+
         SetAccounNameFieldValueIfPossible(fieldId);
     }
 
@@ -246,13 +244,13 @@ public partial class Account : ComponentBase
             FieldId = field.Id,
             Form = PaymentAccountForm,
             Value = field.Value
-        });
+        });        
 
-        _messageStore.Clear(() => field.Value);
+        _messageStore.Clear(() => field.Label);
 
         if (!string.IsNullOrEmpty(errorMessage))
         {
-            _messageStore.Add(() => field.Value, errorMessage);
+            _messageStore.Add(() => field.Label, errorMessage);
         }
 
         SubmitButtonDisabled = !_editContext.Validate();
@@ -312,6 +310,9 @@ public partial class Account : ComponentBase
     public async Task CreatePaymentAccountAsync()
     {
         if (PaymentAccountForm is null)
+            return;        
+
+        if(!ValidatePaymentAccountForm())
             return;
 
         IsFetching = true;
@@ -363,5 +364,30 @@ public partial class Account : ComponentBase
         {
             IsFetching = false;
         }
+    }
+
+    private bool ValidatePaymentAccountForm()
+    {
+        ArgumentNullException.ThrowIfNull(PaymentAccountForm);
+        ArgumentNullException.ThrowIfNull(_messageStore);
+        ArgumentNullException.ThrowIfNull(_editContext);
+
+        foreach (PaymentAccountFormField field in PaymentAccountForm.Fields)
+        {
+            _messageStore.Clear(() => field.Label);
+
+            if (field.Id == FieldId.ACCOUNT_NAME)
+            {
+                if(string.IsNullOrWhiteSpace(field.Value))
+                    _messageStore.Add(() => field.Label, $"{field.Label} is required. {Environment.NewLine} Please provide value.");
+
+                if(PaymentAccounts.Any(a => a.AccountName.Equals(field.Value, StringComparison.Ordinal)))
+                    _messageStore.Add(() => field.Label, $"That account name is already used for another saved account.{Environment.NewLine} Please choose another name.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
+
+        return _editContext.Validate();
     }
 }
