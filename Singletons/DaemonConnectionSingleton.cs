@@ -2,6 +2,7 @@
 using HavenoSharp.Models.Requests;
 using HavenoSharp.Services;
 using Manta.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Manta.Singletons;
 
@@ -9,7 +10,8 @@ public class DaemonConnectionSingleton
 {
     private readonly IHavenoVersionService _versionService;
     private readonly IHavenoWalletService _walletService;
-    private bool _hasCreatedInitializationTransaction;
+    private readonly ILogger<DaemonConnectionSingleton> _logger;
+    private bool _hasCreatedInitializationTransaction;    
 
     public string Version { get; private set; } = string.Empty;
     public bool IsConnected { get; private set; }
@@ -18,13 +20,14 @@ public class DaemonConnectionSingleton
     public bool IsWalletAvailable { get; private set; }
     public Action<bool>? OnWalletAvailabilityChanged;
 
-    public DaemonConnectionSingleton(IHavenoVersionService versionService, IHavenoWalletService walletService)
+    public DaemonConnectionSingleton(IHavenoVersionService versionService, IHavenoWalletService walletService, ILogger<DaemonConnectionSingleton> logger)
     {
         _versionService = versionService;
         _walletService = walletService;
 
         Task.Run(PollDaemon);
         Task.Run(PollWallet);
+        _logger = logger;
     }
 
     private async Task PollWallet()
@@ -63,8 +66,9 @@ public class DaemonConnectionSingleton
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, $"exception during {nameof(PollWallet)}");
                 if (IsWalletAvailable)
                 {
                     IsWalletAvailable = false;
@@ -98,8 +102,9 @@ public class DaemonConnectionSingleton
                     OnConnectionChanged?.Invoke(true);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, $"exception during {nameof(PollDaemon)}");
                 if (IsConnected)
                 {
                     IsConnected = false;
