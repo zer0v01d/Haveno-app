@@ -272,9 +272,17 @@ public partial class Account : ComponentBase
     {
         if (!CustomAccountNameEnabled && AccountNameField is not null && CopyFromField is not null && fieldId == CopyFromField.Id)
         {
-            AccountNameField.Value = $"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {CopyFromField.Value}";
-            _editContext!.NotifyFieldChanged(new FieldIdentifier(AccountNameField, nameof(AccountNameField.Value)));
+            SetAccounNameFieldValueAndNotifyChange($"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {CopyFromField.Value}");
         }
+    }
+
+    private void SetAccounNameFieldValueAndNotifyChange(string value)
+    {
+        ArgumentNullException.ThrowIfNull(AccountNameField);
+        ArgumentNullException.ThrowIfNull(_editContext);
+
+        AccountNameField.Value = value;
+        _editContext.NotifyFieldChanged(new FieldIdentifier(AccountNameField, nameof(AccountNameField.Value)));        
     }
 
     public void HandleCryptoAddressChange()
@@ -292,8 +300,7 @@ public partial class Account : ComponentBase
 
         if (AccountNameField is not null && CopyFromField is null)
         {
-            AccountNameField.Value = $"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {string.Join(", ", SupportedCurrencyCodes.Where(x => x.IsSelected).Select(x => x.Code))}";
-            _editContext!.NotifyFieldChanged(new FieldIdentifier(AccountNameField, nameof(AccountNameField.Value)));
+            SetAccounNameFieldValueAndNotifyChange($"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {string.Join(", ", SupportedCurrencyCodes.Where(x => x.IsSelected).Select(x => x.Code))}");
         }
     }
 
@@ -322,6 +329,9 @@ public partial class Account : ComponentBase
     public async Task CreatePaymentAccountAsync()
     {
         if (PaymentAccountForm is null)
+            return;
+
+        if(!ValidatePaymentAccountForm())
             return;
 
         IsFetching = true;
@@ -373,6 +383,27 @@ public partial class Account : ComponentBase
         {
             IsFetching = false;
         }
+    }
+
+    private bool ValidatePaymentAccountForm()
+    {
+        ArgumentNullException.ThrowIfNull(PaymentAccountForm);
+        ArgumentNullException.ThrowIfNull(_messageStore);
+        ArgumentNullException.ThrowIfNull(_editContext);
+
+        foreach (PaymentAccountFormField field in PaymentAccountForm.Fields)
+        {
+            _messageStore.Clear(() => field.Label);
+
+            HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
+
+            foreach(string customExcMsg in customValidationExceptionMsges)
+                _messageStore.Add(() => field.Label, customExcMsg);
+        }
+
+        _editContext.NotifyValidationStateChanged();
+
+        return _editContext.Validate();
     }
 
     private HashSet<string> ValidateFieldUsingCustomLogic(PaymentAccountFormField field)
