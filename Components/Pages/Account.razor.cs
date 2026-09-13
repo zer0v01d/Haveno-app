@@ -270,7 +270,10 @@ public partial class Account : ComponentBase
 
     private void SetAccounNameFieldValueIfPossible(in FieldId fieldId)
     {
-        if (!CustomAccountNameEnabled && AccountNameField is not null && CopyFromField is not null && fieldId == CopyFromField.Id)
+        if (CustomAccountNameEnabled)
+            return;
+
+        if (AccountNameField is not null && CopyFromField is not null && fieldId == CopyFromField.Id)
         {
             SetAccounNameFieldValueAndNotifyChange($"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {CopyFromField.Value}");
         }
