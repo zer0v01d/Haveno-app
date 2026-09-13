@@ -255,6 +255,11 @@ public partial class Account : ComponentBase
             _messageStore.Add(() => field.Value, errorMessage);
         }
 
+        HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
+
+        foreach(string customExcMsg in customValidationExceptionMsges)
+            _messageStore.Add(() => field.Value, customExcMsg);        
+
         SubmitButtonDisabled = !_editContext.Validate();
         _editContext.NotifyValidationStateChanged();
 
@@ -265,10 +270,20 @@ public partial class Account : ComponentBase
 
     private void SetAccounNameFieldValueIfPossible(in FieldId fieldId)
     {
-        if (!CustomAccountNameEnabled && AccountNameField is not null && CopyFromField is not null && fieldId == CopyFromField.Id)
-        {
-            AccountNameField.Value = $"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {CopyFromField.Value}";
-        }
+        if (CustomAccountNameEnabled)
+            return;
+
+        if (AccountNameField is not null && CopyFromField is not null && fieldId == CopyFromField.Id)
+            SetAccounNameFieldValueAndNotifyChange($"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {CopyFromField.Value}");            
+    }
+
+    private void SetAccounNameFieldValueAndNotifyChange(string value)
+    {
+        ArgumentNullException.ThrowIfNull(AccountNameField);
+        ArgumentNullException.ThrowIfNull(_editContext);
+
+        AccountNameField.Value = value;
+        _editContext.NotifyFieldChanged(new FieldIdentifier(AccountNameField, nameof(AccountNameField.Value)));        
     }
 
     public void HandleCryptoAddressChange()
@@ -285,7 +300,7 @@ public partial class Account : ComponentBase
             return;
 
         if (AccountNameField is not null && CopyFromField is null)
-            AccountNameField.Value = $"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {string.Join(", ", SupportedCurrencyCodes.Where(x => x.IsSelected).Select(x => x.Code))}";
+            SetAccounNameFieldValueAndNotifyChange($"{TraditionalPaymentMethodStrings[SelectedPaymentMethodId]}: {string.Join(", ", SupportedCurrencyCodes.Where(x => x.IsSelected).Select(x => x.Code))}");
     }
 
     public async Task DeleteAccountAsync(string paymentAccountId)
@@ -313,6 +328,9 @@ public partial class Account : ComponentBase
     public async Task CreatePaymentAccountAsync()
     {
         if (PaymentAccountForm is null)
+            return;
+
+        if(!ValidatePaymentAccountForm())
             return;
 
         IsFetching = true;
@@ -365,4 +383,54 @@ public partial class Account : ComponentBase
             IsFetching = false;
         }
     }
+
+    private bool ValidatePaymentAccountForm()
+    {
+        ArgumentNullException.ThrowIfNull(PaymentAccountForm);
+        ArgumentNullException.ThrowIfNull(_messageStore);
+        ArgumentNullException.ThrowIfNull(_editContext);
+
+        foreach (PaymentAccountFormField field in PaymentAccountForm.Fields)
+        {
+            _messageStore.Clear(() => field.Value);
+
+            HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
+
+            foreach(string customExcMsg in customValidationExceptionMsges)
+                _messageStore.Add(() => field.Value, customExcMsg);
+        }
+
+        _editContext.NotifyValidationStateChanged();
+
+        return _editContext.Validate();
+    }
+
+    private HashSet<string> ValidateFieldUsingCustomLogic(PaymentAccountFormField field)
+    {
+        HashSet<string> exceptionMessages = [];
+
+        switch(field.Id)
+        {
+            case FieldId.ACCOUNT_NAME:
+                if(string.IsNullOrWhiteSpace(field.Value))
+                    exceptionMessages.Add($"{field.Label} is required. {Environment.NewLine} Please provide value.");
+
+                if(PaymentAccounts.Any(a => a.AccountName.Equals(field.Value, StringComparison.Ordinal)))
+                    exceptionMessages.Add($"That account name is already used for another saved account.{Environment.NewLine} Please choose another name.");
+                break;
+
+            default:
+                break;
+        }
+
+        return exceptionMessages;
+    }
+
+    private static void SetAccountName(string newValue, PaymentAccountFormField field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        ArgumentNullException.ThrowIfNull(newValue);
+
+        field.Value = newValue.Trim();
+    }            
 }
