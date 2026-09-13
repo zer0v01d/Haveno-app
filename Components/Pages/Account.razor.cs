@@ -246,11 +246,11 @@ public partial class Account : ComponentBase
             Value = field.Value
         });        
 
-        _messageStore.Clear(() => field.Label);
+        _messageStore.Clear(() => field.Value);
 
         if (!string.IsNullOrEmpty(errorMessage))
         {
-            _messageStore.Add(() => field.Label, errorMessage);
+            _messageStore.Add(() => field.Value, errorMessage);
         }
 
         HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
