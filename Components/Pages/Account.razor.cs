@@ -248,17 +248,17 @@ public partial class Account : ComponentBase
             Value = field.Value
         });        
 
-        _messageStore.Clear(() => field.Label);
+        _messageStore.Clear(() => field.Value);
 
         if (!string.IsNullOrEmpty(errorMessage))
         {
-            _messageStore.Add(() => field.Label, errorMessage);
+            _messageStore.Add(() => field.Value, errorMessage);
         }
 
         HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
 
         foreach(string customExcMsg in customValidationExceptionMsges)
-            _messageStore.Add(() => field.Label, customExcMsg);
+            _messageStore.Add(() => field.Value, customExcMsg);
 
         SubmitButtonDisabled = !_editContext.Validate();
         _editContext.NotifyValidationStateChanged();
@@ -396,12 +396,12 @@ public partial class Account : ComponentBase
 
         foreach (PaymentAccountFormField field in PaymentAccountForm.Fields)
         {
-            _messageStore.Clear(() => field.Label);
+            _messageStore.Clear(() => field.Value);
 
             HashSet<string> customValidationExceptionMsges = ValidateFieldUsingCustomLogic(field);
 
             foreach(string customExcMsg in customValidationExceptionMsges)
-                _messageStore.Add(() => field.Label, customExcMsg);
+                _messageStore.Add(() => field.Value, customExcMsg);
         }
 
         _editContext.NotifyValidationStateChanged();
@@ -428,5 +428,13 @@ public partial class Account : ComponentBase
         }
 
         return exceptionMessages;
+    }
+
+    private static void SetAccountName(string newValue, PaymentAccountFormField field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        ArgumentNullException.ThrowIfNull(newValue);
+
+        field.Value = newValue.Trim();
     }
 }
